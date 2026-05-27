@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video Summary</title>
+<style>
+:root {
+  --accent: #2563EB;
+  --accent-light: #e8f0fe;
+  --gray-50: #f8f9fa;
+  --gray-100: #f1f3f5;
+  --gray-200: #e9ecef;
+  --gray-400: #868e96;
+  --gray-600: #495057;
+  --gray-800: #212529;
+  --radius: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+  background: var(--gray-50);
+  color: var(--gray-800);
+  min-height: 100vh;
+}
+
+/* ── Layout ── */
+.container { max-width: 720px; margin: 0 auto; padding: 40px 20px; }
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.view { display: none; }
+.view.active { display: block; }
+
+/* ── Input View ── */
+.logo { font-size: 22px; font-weight: 700; color: var(--accent); margin-bottom: 24px; text-align: center; }
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; color: var(--gray-600); }
+input[type="text"] {
+  width: 100%; padding: 10px 14px; border: 1px solid var(--gray-200);
+  border-radius: var(--radius); font-size: 15px; outline: none; transition: border .2s;
+}
+input[type="text"]:focus { border-color: var(--accent); }
+
+.toggle-row { display: flex; gap: 8px; }
+.toggle-btn {
+  flex: 1; padding: 8px; border: 1px solid var(--gray-200);
+  background: #fff; border-radius: var(--radius); cursor: pointer;
+  font-size: 14px; color: var(--gray-600); transition: all .2s; text-align: center;
+}
+.toggle-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+select {
+  width: 100%; padding: 10px 14px; border: 1px solid var(--gray-200);
+  border-radius: var(--radius); font-size: 14px; background: #fff;
+  outline: none; cursor: pointer;
+}
+.conditional { display: none; }
+.conditional.show { display: block; }
+
+.btn {
+  width: 100%; padding: 12px; border: none; border-radius: var(--radius);
+  font-size: 16px; font-weight: 500; cursor: pointer; transition: all .2s;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { opacity: .9; }
+.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+.btn-ghost { background: transparent; color: var(--gray-400); font-size: 13px; width: auto; padding: 8px 0; }
+.btn-ghost:hover { color: var(--accent); }
+
+/* ── Progress View ── */
+.progress-stages { display: flex; justify-content: space-between; margin-bottom: 24px; position: relative; }
+.progress-stages::before {
+  content: ''; position: absolute; top: 16px; left: 30px; right: 30px;
+  height: 2px; background: var(--gray-200); z-index: 0;
+}
+.stage-dot {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--gray-100);
+  border: 2px solid var(--gray-200); display: flex; align-items: center; justify-content: center;
+  font-size: 14px; z-index: 1; position: relative; transition: all .3s;
+}
+.stage-dot.done { background: var(--accent); border-color: var(--accent); color: #fff; }
+.stage-dot.active { border-color: var(--accent); color: var(--accent); animation: pulse 1.2s infinite; }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(37,99,235,.3); } 50% { box-shadow: 0 0 0 8px rgba(37,99,235,0); } }
+.stage-label { font-size: 11px; color: var(--gray-400); text-align: center; margin-top: 8px; }
+.stage-label.done { color: var(--accent); }
+.progress-bar-wrap { background: var(--gray-200); border-radius: 4px; height: 6px; margin-bottom: 16px; overflow: hidden; }
+.progress-bar { height: 100%; background: var(--accent); border-radius: 4px; transition: width .4s; width: 0; }
+.progress-message { text-align: center; color: var(--gray-600); font-size: 14px; min-height: 20px; }
+
+/* ── Result / History View ── */
+.result-layout { display: flex; gap: 20px; height: calc(100vh - 40px); padding: 20px; }
+.sidebar { width: 260px; flex-shrink: 0; background: #fff; border-radius: 12px; overflow-y: auto; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.sidebar-header {
+  padding: 16px 20px; font-size: 14px; font-weight: 600; color: var(--gray-600);
+  border-bottom: 1px solid var(--gray-100); position: sticky; top: 0; background: #fff;
+}
+.history-item {
+  padding: 12px 20px; cursor: pointer; border-bottom: 1px solid var(--gray-50);
+  transition: background .15s;
+}
+.history-item:hover { background: var(--gray-50); }
+.history-item.active { background: var(--accent-light); }
+.history-item .hi-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-item .hi-meta { font-size: 12px; color: var(--gray-400); display: flex; gap: 8px; }
+.main-panel { flex: 1; display: flex; flex-direction: column; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.toolbar {
+  display: flex; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--gray-100);
+  align-items: center;
+}
+.toolbar .btn { width: auto; padding: 8px 16px; font-size: 13px; }
+.toolbar .spacer { flex: 1; }
+.preview-frame { flex: 1; border: none; width: 100%; }
+.empty-state { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--gray-400); font-size: 14px; }
+.empty-state p { text-align: center; }
+.error-box { background: #fff3f3; color: #c92a2a; padding: 12px 16px; border-radius: var(--radius); font-size: 14px; margin-top: 12px; display: none; }
+.error-box.show { display: block; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .result-layout { flex-direction: column; height: auto; }
+  .sidebar { width: 100%; max-height: 200px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ VIEW 1: INPUT ═══════════ -->
+<div id="view-input" class="view active">
+  <div class="container">
+    <div class="card">
+      <div class="logo">Video Summary</div>
+      <div class="form-group">
+        <label>视频链接</label>
+        <input type="text" id="input-url" placeholder="粘贴 B站 / YouTube 等视频链接...">
+      </div>
+
+      <div class="form-group">
+        <label>模式</label>
+        <div class="toggle-row" id="toggle-mode">
+          <button class="toggle-btn active" data-value="original">原文</button>
+          <button class="toggle-btn" data-value="summary">总结</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>大模型来源</label>
+        <div class="toggle-row" id="toggle-llm">
+          <button class="toggle-btn active" data-value="local">本地 Ollama</button>
+          <button class="toggle-btn" data-value="api">DeepSeek API</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Whisper 模型（无字幕时语音转写用）</label>
+        <select id="select-whisper">
+          <option value="tiny">Tiny — 最快，准确度一般，适合清晰语音</option>
+          <option value="base" selected>Base — 速度和准确度均衡，推荐日常使用</option>
+          <option value="medium">Medium — 准确度最高，速度较慢，适合嘈杂环境</option>
+        </select>
+      </div>
+
+      <div id="conditional-summary" class="conditional">
+        <div class="form-group">
+          <label>总结粒度</label>
+          <select id="select-granularity">
+            <option value="brief">简洁（约200字）</option>
+            <option value="standard" selected>标准（约800字）</option>
+            <option value="detailed">详细（约2000字）</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-submit" onclick="submitTask()">开始处理</button>
+      <div class="error-box" id="error-input"></div>
+    </div>
+    <div style="text-align:center;margin-top:16px;">
+      <button class="btn btn-ghost" onclick="showHistory()">浏览历史记录 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ VIEW 2: PROGRESS ═══════════ -->
+<div id="view-progress" class="view">
+  <div class="container">
+    <div class="card">
+      <div class="logo" style="font-size:16px;">正在处理...</div>
+      <div class="progress-stages">
+        <div style="text-align:center;z-index:1;">
+          <div class="stage-dot" id="dot-fetch">1</div>
+          <div class="stage-label" id="label-fetch">获取信息</div>
+        </div>
+        <div style="text-align:center;z-index:1;">
+          <div class="stage-dot" id="dot-transcribe">2</div>
+          <div class="stage-label" id="label-transcribe">字幕/转写</div>
+        </div>
+        <div style="text-align:center;z-index:1;">
+          <div class="stage-dot" id="dot-summarize">3</div>
+          <div class="stage-label" id="label-summarize">AI总结</div>
+        </div>
+        <div style="text-align:center;z-index:1;">
+          <div class="stage-dot" id="dot-done">✓</div>
+          <div class="stage-label" id="label-done">完成</div>
+        </div>
+      </div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+      <div class="progress-message" id="progress-message">等待处理...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ VIEW 3: RESULT / HISTORY ═══════════ -->
+<div id="view-result" class="view">
+  <div class="result-layout">
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">历史记录</div>
+      <div id="history-list">
+        <div class="empty-state" style="padding:40px 20px;"><p>暂无记录</p></div>
+      </div>
+    </div>
+    <div class="main-panel">
+      <div class="toolbar">
+        <button class="btn btn-ghost" onclick="showInput()" style="color:var(--gray-600);">← 返回</button>
+        <button class="btn btn-ghost" onclick="showInput()">重新处理</button>
+        <span class="spacer"></span>
+        <button class="btn btn-primary" id="btn-open-tab" onclick="openInNewTab()" disabled>在新标签页打开</button>
+        <button class="btn btn-ghost" id="btn-delete" onclick="deleteItem()" style="color:#c92a2a;">删除</button>
+      </div>
+      <iframe class="preview-frame" id="preview-frame"></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// State
+// ══════════════════════════════════════
+const state = {
+  mode: 'original',
+  llmSource: 'local',
+  currentResultId: null,
+  pollTimer: null,
+};
+
+// ══════════════════════════════════════
+// UI Toggles
+// ══════════════════════════════════════
+document.getElementById('toggle-mode').addEventListener('click', e => {
+  if (!e.target.classList.contains('toggle-btn')) return;
+  document.querySelectorAll('#toggle-mode .toggle-btn').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  state.mode = e.target.dataset.value;
+  document.getElementById('conditional-summary').classList.toggle('show', state.mode === 'summary');
+});
+
+document.getElementById('toggle-llm').addEventListener('click', e => {
+  if (!e.target.classList.contains('toggle-btn')) return;
+  document.querySelectorAll('#toggle-llm .toggle-btn').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  state.llmSource = e.target.dataset.value;
+});
+
+// ══════════════════════════════════════
+// View Switching
+// ══════════════════════════════════════
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  if (state.pollTimer) { clearInterval(state.pollTimer); state.pollTimer = null; }
+}
+
+function showInput() {
+  switchView('input');
+}
+
+function showHistory() {
+  switchView('result');
+  loadHistory();
+}
+
+// ══════════════════════════════════════
+// Submit Task
+// ══════════════════════════════════════
+async function submitTask() {
+  const url = document.getElementById('input-url').value.trim();
+  if (!url) {
+    showError('input', '请输入视频链接');
+    return;
+  }
+
+  const body = {
+    url: url,
+    mode: state.mode,
+    granularity: document.getElementById('select-granularity').value,
+    llm_source: state.llmSource,
+    whisper_model: document.getElementById('select-whisper').value,
+  };
+
+  document.getElementById('btn-submit').disabled = true;
+  document.getElementById('btn-submit').textContent = '提交中...';
+  hideError('input');
+
+  try {
+    const resp = await fetch('/api/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.detail || '请求失败');
+    }
+    const data = await resp.json();
+    switchView('progress');
+    pollProgress(data.task_id);
+  } catch (e) {
+    showError('input', e.message);
+    document.getElementById('btn-submit').disabled = false;
+    document.getElementById('btn-submit').textContent = '开始处理';
+  }
+}
+
+// ══════════════════════════════════════
+// Progress Polling
+// ══════════════════════════════════════
+function pollProgress(taskId) {
+  const stageDots = {
+    fetching: 'dot-fetch',
+    downloading: 'dot-transcribe',
+    subtitle: 'dot-transcribe',
+    transcribing: 'dot-transcribe',
+    summarizing: 'dot-summarize',
+    rendering: 'dot-summarize',
+    saving: 'dot-summarize',
+    done: 'dot-done',
+  };
+
+  const stageNames = ['fetching', 'downloading', 'subtitle', 'transcribing', 'summarizing', 'rendering', 'saving'];
+
+  const evtSource = new EventSource('/api/progress/' + taskId);
+
+  evtSource.addEventListener('progress', e => {
+    const d = JSON.parse(e.data);
+    document.getElementById('progress-bar').style.width = d.progress + '%';
+    document.getElementById('progress-message').textContent = d.message;
+
+    // Update stage dots
+    const currentStage = d.stage;
+    let passed = false;
+    stageNames.forEach(s => {
+      const dot = document.getElementById(stageDots[s] || '');
+      const label = document.getElementById(s === 'fetching' ? 'label-fetch' :
+        (s === 'downloading' || s === 'subtitle' || s === 'transcribing') ? 'label-transcribe' :
+        (s === 'summarizing' || s === 'rendering' || s === 'saving') ? 'label-summarize' : '');
+      if (!dot) return;
+
+      if (s === currentStage) {
+        dot.classList.add('active');
+        passed = true;
+      } else if (!passed) {
+        dot.classList.add('done');
+        dot.classList.remove('active');
+        dot.textContent = '✓';
+      } else {
+        dot.classList.remove('done', 'active');
+      }
+    });
+
+    // Handle done/error
+    if (d.stage === 'done' && d.result_id) {
+      evtSource.close();
+      document.getElementById('dot-done').classList.add('done');
+      document.getElementById('label-done').classList.add('done');
+
+      // Reset submit button for next use
+      document.getElementById('btn-submit').disabled = false;
+      document.getElementById('btn-submit').textContent = '开始处理';
+
+      // Short delay then show result
+      setTimeout(() => {
+        switchView('result');
+        loadHistory(d.result_id);
+        state.currentResultId = d.result_id;
+      }, 800);
+    }
+
+    if (d.stage === 'error') {
+      evtSource.close();
+      document.getElementById('progress-message').textContent = '错误: ' + d.message;
+      document.getElementById('btn-submit').disabled = false;
+      document.getElementById('btn-submit').textContent = '开始处理';
+    }
+  });
+
+  evtSource.addEventListener('error', () => {
+    evtSource.close();
+  });
+}
+
+// ══════════════════════════════════════
+// History
+// ══════════════════════════════════════
+async function loadHistory(activeId) {
+  try {
+    const resp = await fetch('/api/history');
+    const data = await resp.json();
+    const list = document.getElementById('history-list');
+
+    if (!data.items || data.items.length === 0) {
+      list.innerHTML = '<div class="empty-state" style="padding:40px 20px;"><p>暂无记录</p></div>';
+      document.getElementById('preview-frame').srcdoc = '';
+      return;
+    }
+
+    list.innerHTML = data.items.map(item => `
+      <div class="history-item ${item.id === activeId ? 'active' : ''}"
+           onclick="selectHistory('${item.id}')">
+        <div class="hi-title">${escHtml(item.title)}</div>
+        <div class="hi-meta">
+          <span>${item.platform || ''}</span>
+          <span>${item.mode === 'summary' ? '总结' : '原文'}</span>
+          <span>${formatDate(item.created_at)}</span>
+        </div>
+      </div>
+    `).join('');
+
+    if (activeId) {
+      loadResult(activeId);
+    } else if (data.items.length > 0) {
+      selectHistory(data.items[0].id);
+    }
+  } catch (e) {
+    console.error('加载历史失败', e);
+  }
+}
+
+async function selectHistory(id) {
+  state.currentResultId = id;
+  document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
+  const items = document.querySelectorAll('.history-item');
+  items.forEach(el => {
+    if (el.querySelector('.hi-title')?.textContent && el.onclick.toString().includes(id)) {
+      el.classList.add('active');
+    }
+  });
+  loadResult(id);
+}
+
+async function loadResult(id) {
+  try {
+    const resp = await fetch('/api/output/' + id);
+    if (!resp.ok) throw new Error('加载失败');
+    const html = await resp.text();
+    document.getElementById('preview-frame').srcdoc = html;
+    document.getElementById('btn-open-tab').disabled = false;
+    state.currentResultId = id;
+
+    // Highlight active in sidebar
+    document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.history-item').forEach(el => {
+      if (el.getAttribute('onclick') && el.getAttribute('onclick').includes(id)) {
+        el.classList.add('active');
+      }
+    });
+  } catch (e) {
+    console.error('加载结果失败', e);
+  }
+}
+
+function openInNewTab() {
+  if (state.currentResultId) {
+    window.open('/api/view/' + state.currentResultId, '_blank');
+  }
+}
+
+async function deleteItem() {
+  if (!state.currentResultId) return;
+  if (!confirm('确认删除这条记录？')) return;
+  try {
+    await fetch('/api/output/' + state.currentResultId, { method: 'DELETE' });
+    state.currentResultId = null;
+    document.getElementById('preview-frame').srcdoc = '';
+    document.getElementById('btn-open-tab').disabled = true;
+    loadHistory();
+  } catch (e) {
+    console.error('删除失败', e);
+  }
+}
+
+// ══════════════════════════════════════
+// Helpers
+// ══════════════════════════════════════
+function showError(area, msg) {
+  const el = document.getElementById('error-' + area);
+  if (el) { el.textContent = msg; el.classList.add('show'); }
+}
+function hideError(area) {
+  const el = document.getElementById('error-' + area);
+  if (el) el.classList.remove('show');
+}
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+</script>
+
+</body>
+</html>
