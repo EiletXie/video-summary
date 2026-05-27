@@ -26,7 +26,7 @@
 ![总结结果](./screenshots/03-original.png)
 
 ### 服务器日志
-![历史记录](./screenshots/05-log-output.png)
+![历史记录](./screenshots/04-log-output.png)
 
 ## 技术栈
 
