@@ -347,7 +347,7 @@ sse-starlette==2.0+
 
 ```env
 # DeepSeek API (API模式使用)
-DEEPSEEK_API_KEY=sk-9c788853a35342149a88fda93cc8159a
+DEEPSEEK_API_KEY=
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 
 # Ollama (本地模式使用，默认值无需修改)
